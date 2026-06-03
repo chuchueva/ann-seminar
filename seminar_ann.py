@@ -74,9 +74,10 @@ print(f"Признаки: {predictors_name[:5]}...")
 
 # ==================== МАСШТАБИРОВАНИЕ ====================
 # ВАЖНО: масштабируем после разделения train/val, но пока что сохраняем параметры
-scaler_mean = data.mean(axis=0)
-scaler_std = data.values.std(axis=0)
+scaler_mean = data.mean(axis=0).values
+scaler_std = data.std(axis=0).values
 data_scaled = (data.values - scaler_mean) / scaler_std
+data_scaled = data_scaled.astype(np.float32)
 
 predictors = data_scaled[:, data.columns.isin(predictors_name)]
 target = data_scaled[:, data.columns.isin([target_name])].flatten()
@@ -84,7 +85,7 @@ target = data_scaled[:, data.columns.isin([target_name])].flatten()
 # ==================== ПОДГОТОВКА SEQUENCES ====================
 horizon = 24  # прогноз на 24 часа
 batch_size = 32
-network_epochs = 3
+network_epochs = 30
 learning_rate = 0.001
 
 def create_sequences(predictors, target, horizon):
@@ -107,7 +108,7 @@ y_train, y_val = y[:split_idx], y[split_idx:]
 print(f"Train: {X_train.shape}, Val: {X_val.shape}")
 
 # ==================== ПОСТРОЕНИЕ МОДЕЛИ ====================
-# Вариант 1: MLP (как в исходном коде)
+# Вариант 1: MLP
 def build_mlp(input_shape):
     model = keras.Sequential([
         layers.Flatten(input_shape=input_shape),
@@ -225,7 +226,7 @@ plt.show()
 
 # ==================== СОХРАНЕНИЕ МОДЕЛИ И СКАЛЕРОВ ====================
 # Сохраняем модель
-model.save('electricity_forecast_model.keras')
+model.save('models/electricity_forecast_model.keras')
 print("\n✓ Модель сохранена: electricity_forecast_model.keras")
 
 # Сохраняем скалеры
@@ -237,7 +238,7 @@ scaler_info = {
     'horizon': horizon
 }
 
-with open('scaler_info.json', 'w') as f:
+with open('models/scaler_info.json', 'w') as f:
     json.dump(scaler_info, f, indent=2)
 print("✓ Скалеры сохранены: scaler_info.json")
 
