@@ -32,6 +32,7 @@ source_data = pd.read_csv(
     parse_dates=['timestep'],
     dtype=CUSTOM_DTYPES
 )
+
 source_data.index = source_data['timestep']
 source_data.drop(columns=['timestep'], inplace=True)
 
@@ -85,20 +86,20 @@ target = data_scaled[:, data.columns.isin([target_name])].flatten()
 # ==================== ПОДГОТОВКА SEQUENCES ====================
 horizon = 24  # прогноз на 24 часа
 batch_size = 32
-network_epochs = 30
+network_epochs = 10
 learning_rate = 0.001
 
 def create_sequences(predictors, target, horizon):
     """Создает последовательности для обучения"""
     X, y = [], []
-    for i in range(len(predictors) - horizon):
-        X.append(predictors[i:i+horizon])
-        y.append(target[i+horizon])
+    for i in range(len(predictors) - horizon*2):
+        X.append(predictors[i:i+horizon])           # вход: 24 часа истории
+        y.append(target[i+horizon:i+horizon*2])     # выход: следующие 24 часа
     return np.array(X), np.array(y)
 
 X, y = create_sequences(predictors, target, horizon)
-print(f"\nФорма X: {X.shape}")  # (samples, horizon, features)
-print(f"Форма y: {y.shape}")    # (samples,)
+print(f"Форма X: {X.shape}")  # (samples, horizon, features)
+print(f"Форма y: {y.shape}")  # (samples, horizon)
 
 # Разделение на train/val (80/20)
 split_idx = int(len(X) * 0.8)
@@ -114,8 +115,8 @@ def build_mlp(input_shape):
         layers.Flatten(input_shape=input_shape),
         layers.Dense(64, activation='relu'),
         layers.Dropout(0.2),
-        layers.Dense(32, activation='relu'),
-        layers.Dense(1)  # прогноз на 1 шаг
+        layers.Dense(48, activation='relu'),
+        layers.Dense(24)  # прогноз на 1 шаг
     ])
     return model
 
@@ -127,8 +128,7 @@ def build_lstm(input_shape):
         layers.Dropout(0.2),
         layers.LSTM(32),
         layers.Dropout(0.2),
-        layers.Dense(16, activation='relu'),
-        layers.Dense(1)
+        layers.Dense(24)
     ])
     return model
 
@@ -197,7 +197,7 @@ target_mean = scaler_mean[data.columns.get_loc(target_name)]
 target_std = scaler_std[data.columns.get_loc(target_name)]
 
 y_val_original = y_val * target_std + target_mean
-y_pred_original = y_pred.flatten() * target_std + target_mean
+y_pred_original = y_pred * target_std + target_mean
 
 # ==================== МЕТРИКИ ====================
 mae = np.mean(np.abs(y_val_original - y_pred_original))
@@ -212,11 +212,13 @@ print(f"{'='*50}")
 
 # ==================== ВИЗУАЛИЗАЦИЯ ПРОГНОЗА ====================
 # Покажем первые 500 часов
-n_show = min(500, len(y_val_original))
+y_val_original_flat = y_val_original.flatten()
+y_pred_original_flat = y_pred_original.flatten()
+n_show = min(500, len(y_val_original_flat))
 
 plt.figure(figsize=(15, 6))
-plt.plot(y_val_original[:n_show], label='Actual', alpha=0.7)
-plt.plot(y_pred_original[:n_show], label='Predicted', alpha=0.7)
+plt.plot(y_val_original_flat[:n_show], label='Actual', alpha=0.7)
+plt.plot(y_pred_original_flat[:n_show], label='Predicted', alpha=0.7)
 plt.title(f'Прогноз энергопотребления (MAE = {mae:.2f} MWh, MAPE = {mape:.1f}%)')
 plt.xlabel('Часы')
 plt.ylabel('MWh')
@@ -232,9 +234,9 @@ print("\n✓ Модель сохранена: electricity_forecast_model.keras")
 # Сохраняем скалеры
 scaler_info = {
     'target_name': target_name,
-    'target_mean': float(target_mean),
-    'target_std': float(target_std),
-    'feature_names': predictors_name,
+    'feature_names': predictors_name.tolist() if hasattr(predictors_name, 'tolist') else list(predictors_name),
+    'feature_mean': scaler_mean.tolist(),  # среднее для всех колонок
+    'feature_std': scaler_std.tolist(),    # стандартное отклонение для всех колонок
     'horizon': horizon
 }
 
@@ -248,14 +250,21 @@ print("ПРИМЕР ЗАГРУЗКИ МОДЕЛИ (в продакшне)")
 print("="*50)
 print("""
 # Загрузка модели
-loaded_model = keras.models.load_model('electricity_forecast_model.keras')
+loaded_model = keras.models.load_model('models/electricity_forecast_model.keras')
 
 # Загрузка скалеров
-with open('scaler_info.json', 'r') as f:
+with open('models/scaler_info.json', 'r') as f:
     scaler_info = json.load(f)
 
-# Прогноз для новых данных
-# new_data_scaled = (new_data - scaler_mean) / scaler_std
+# Для новых данных нужно:
+# 1. Создать DataFrame с теми же колонками, что и в feature_names
+# 2. Масштабировать: (new_data - scaler_info['feature_mean']) / scaler_info['feature_std']
+# 3. Сделать прогноз
+# 4. Обратное масштабирование только для целевой переменной
+
+# Пример:
+# new_data_scaled = (new_data.values - scaler_info['feature_mean']) / scaler_info['feature_std']
 # prediction_scaled = loaded_model.predict(new_data_scaled)
-# prediction = prediction_scaled * scaler_info['target_std'] + scaler_info['target_mean']
+# prediction = prediction_scaled * scaler_info['feature_std'][0] + scaler_info['feature_mean'][0]
+# (индекс 0 предполагает, что целевая переменная - первая колонка)
 """)
