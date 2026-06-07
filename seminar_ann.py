@@ -259,27 +259,27 @@ with open('models/scaler_info.json', 'w') as f:
     json.dump(scaler_info, f, indent=2)
 print("✓ Скалеры сохранены: scaler_info.json")
 
-# ==================== ПРИМЕР ИСПОЛЬЗОВАНИЯ ====================
-print("\n" + "="*50)
-print("ПРИМЕР ЗАГРУЗКИ МОДЕЛИ (в продакшне)")
-print("="*50)
-print("""
-# Загрузка модели
-loaded_model = keras.models.load_model('models/electricity_forecast_model.keras')
-
-# Загрузка скалеров
-with open('models/scaler_info.json', 'r') as f:
-    scaler_info = json.load(f)
-
-# Для новых данных нужно:
-# 1. Создать DataFrame с теми же колонками, что и в feature_names
-# 2. Масштабировать: (new_data - scaler_info['feature_mean']) / scaler_info['feature_std']
-# 3. Сделать прогноз
-# 4. Обратное масштабирование только для целевой переменной
-
-# Пример:
-# new_data_scaled = (new_data.values - scaler_info['feature_mean']) / scaler_info['feature_std']
-# prediction_scaled = loaded_model.predict(new_data_scaled)
-# prediction = prediction_scaled * scaler_info['feature_std'][0] + scaler_info['feature_mean'][0]
-# (индекс 0 предполагает, что целевая переменная - первая колонка)
-""")
+# # ==================== ПРИМЕР ИСПОЛЬЗОВАНИЯ ====================
+# print("\n" + "="*50)
+# print("ПРИМЕР ЗАГРУЗКИ МОДЕЛИ (в продакшне)")
+# print("="*50)
+# print("""
+# # Загрузка модели
+# loaded_model = keras.models.load_model('models/electricity_forecast_model.keras')
+#
+# # Загрузка скалеров
+# with open('models/scaler_info.json', 'r') as f:
+#     scaler_info = json.load(f)
+#
+# # Для новых данных нужно:
+# # 1. Создать DataFrame с теми же колонками, что и в feature_names
+# # 2. Масштабировать: (new_data - scaler_info['feature_mean']) / scaler_info['feature_std']
+# # 3. Сделать прогноз
+# # 4. Обратное масштабирование только для целевой переменной
+#
+# # Пример:
+# # new_data_scaled = (new_data.values - scaler_info['feature_mean']) / scaler_info['feature_std']
+# # prediction_scaled = loaded_model.predict(new_data_scaled)
+# # prediction = prediction_scaled * scaler_info['feature_std'][0] + scaler_info['feature_mean'][0]
+# # (индекс 0 предполагает, что целевая переменная - первая колонка)
+# """)
