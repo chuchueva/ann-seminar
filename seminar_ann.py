@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 import tensorflow as tf
 import keras
-from tensorflow.keras import layers, optimizers, callbacks
+from keras import layers, optimizers, callbacks
 
 print(f"TensorFlow version: {tf.__version__}")
 print(f"Keras version: {keras.__version__}")
