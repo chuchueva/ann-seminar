@@ -2,6 +2,7 @@
 # НЕЙРОННЫЕ СЕТИ ДЛЯ ПРОГНОЗИРОВАНИЯ ЭНЕРГОПОТРЕБЛЕНИЯ
 # =====================================================
 
+import random
 import numpy as np
 import pandas as pd
 import json
@@ -18,6 +19,19 @@ print(f"Keras version: {keras.__version__}")
 # ==================== НАСТРОЙКИ ====================
 data_dir = 'data/'
 file_name = 'RU_Electricity_Market_PZ_dayahead_price_volume.csv'
+
+
+def set_seed(seed=42):
+
+    """Фиксирует все генераторы случайных чисел для воспроизводимости"""
+    random.seed(seed)
+    np.random.seed(seed)
+    tf.random.set_seed(seed)
+
+    # Для TensorFlow 2.x (опционально, но рекомендуется)
+    tf.experimental.numpy.random.seed(seed)
+
+# set_seed()
 
 
 CUSTOM_DTYPES = {
