@@ -31,7 +31,7 @@ def set_seed(seed=42):
     # Для TensorFlow 2.x (опционально, но рекомендуется)
     tf.experimental.numpy.random.seed(seed)
 
-# set_seed()
+set_seed(456)
 
 
 CUSTOM_DTYPES = {
@@ -55,6 +55,7 @@ target_name = 'consumption_eur'
 print(f"Данные загружены: {len(source_data)} записей")
 print(f"Период: {source_data.index.min()} — {source_data.index.max()}")
 
+# data = preprocess(data)
 
 # ==================== FEATURE ENGINEERING ====================
 data = pd.DataFrame()
@@ -100,9 +101,9 @@ target = data_scaled[:, data.columns.isin([target_name])].flatten()
 
 # ==================== ПОДГОТОВКА SEQUENCES ====================
 horizon = 24  # прогноз на 24 часа
-batch_size = 32
+batch_size = 30
 network_epochs = 10
-learning_rate = 0.001
+learning_rate = 0.00015
 
 def create_sequences(predictors, target, horizon):
     """Создает последовательности для обучения"""
@@ -116,6 +117,11 @@ X, y = create_sequences(predictors, target, horizon)
 print(f"Форма X: {X.shape}")  # (samples, horizon, features)
 print(f"Форма y: {y.shape}")  # (samples, horizon)
 
+# idx = np.arange(0, X.shape[0])
+# rng = np.random.default_rng(seed=42)
+# rng.shuffle(idx)
+# X_ss = X[idx[:30000]]
+
 # Разделение на train/val (80/20)
 split_idx = int(len(X) * 0.8)
 X_train, X_val = X[:split_idx], X[split_idx:]
@@ -128,28 +134,28 @@ print(f"Train: {X_train.shape}, Val: {X_val.shape}")
 def build_mlp(input_shape):
     model = keras.Sequential([
         layers.Flatten(input_shape=input_shape),
-        layers.Dense(64, activation='relu'),
-        layers.Dropout(0.2),
-        layers.Dense(48, activation='relu'),
-        layers.Dense(24)  # прогноз на 1 шаг
+        layers.Dense(60, activation='relu'),
+        # layers.Dropout(0.2),
+        # layers.Dense(48, activation='relu'),
+        layers.Dense(24)  # прогноз на 24 шаг
     ])
     return model
 
 # Вариант 2: LSTM (рекомендуется показать на семинаре)
 def build_lstm(input_shape):
     model = keras.Sequential([
-        layers.LSTM(64, input_shape=input_shape, return_sequences=True),
-        layers.BatchNormalization(),
-        layers.Dropout(0.2),
-        layers.LSTM(32),
-        layers.Dropout(0.2),
+        layers.LSTM(64, input_shape=input_shape, return_sequences=False),
+        # layers.BatchNormalization(),
+        # layers.Dropout(0.2),
+        # layers.LSTM(32),
+        # layers.Dropout(0.2),
         layers.Dense(24)
     ])
     return model
 
 # Выбираем модель
-model = build_mlp(X_train.shape[1:])
-# model = build_lstm(X_train.shape[1:])  # раскомментировать для LSTM
+# model = build_mlp(X_train.shape[1:])
+model = build_lstm(X_train.shape[1:])  # раскомментировать для LSTM
 
 model.summary()
 
@@ -157,7 +163,7 @@ model.summary()
 model.compile(
     optimizer=optimizers.Adam(learning_rate=learning_rate),
     loss='mae',
-    metrics=['mae', 'mse']
+    metrics=['mse', 'mae']
 )
 
 # ==================== CALLBACKS ====================
